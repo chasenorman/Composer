@@ -46,4 +46,15 @@ public class Degree {
     public boolean diatonic(boolean major) {
         return intervalFromRoot.semitones == (major ? majorDiatonic : minorDiatonic)[intervalFromRoot.number];
     }
+
+    String[] notes = {"C", "D", "E", "F", "G", "A", "B"};
+    public String noteString(Key key) {
+        Interval n = key.intervalFromC.add(intervalFromRoot).octaveMod();
+        return notes[n.number] + n.accidental().toStringNaturalOmitted();
+    }
+
+    public String noteStringWithOctave(Key key, int midi) {
+        int octave = ((midi - intervalFromRoot.accidental().accidental) / 12) - 1;
+        return noteString(key) + octave;
+    }
 }

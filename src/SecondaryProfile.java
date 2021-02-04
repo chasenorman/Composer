@@ -10,7 +10,7 @@ public enum SecondaryProfile {
     III(Degree.b3, true, new Chord[]{Chord.III, Chord.i, Chord.V_VI, Chord.viidim_VI, Chord.viihalfdim_VI}, new Chord[]{Chord.iv, Chord.VI, Chord.i}),
     iv(Degree._4, false, new Chord[]{Chord.iv, Chord.iihalfdim, Chord.V_VII, Chord.viidim_VII, Chord.viihalfdim_VII}, new Chord[]{}),
     v(Degree._5, false, new Chord[]{Chord.V_MINOR, Chord.v, Chord.III}, new Chord[]{Chord.i, Chord.III}),
-    VI(Degree.b6, true, new Chord[]{Chord.VI, Chord.iv}, new Chord[]{Chord.iv}),
+    VI(Degree.b6, true, new Chord[]{Chord.VI, Chord.iv, Chord.N6}, new Chord[]{Chord.iv}),
     VII(Degree.b7, true, new Chord[]{Chord.VII, Chord.V_MINOR, Chord.v, Chord.V_III, Chord.viidim_III, Chord.viihalfdim_III}, new Chord[]{Chord.i, Chord.III, Chord.v});
 
     public final Degree modulation;
@@ -24,4 +24,9 @@ public enum SecondaryProfile {
         this.resolutions = resolutions;
         this.pivots = pivots;
     }
+
+    Chord tonicized() {
+        return resolutions[0];
+    }
 }
+

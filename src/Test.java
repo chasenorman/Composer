@@ -13,21 +13,23 @@ public interface Test extends BiPredicate<State, State> {
             Test::seventhTendencyTone, Test::modulationHasPivotOrPassing, Test::directFifthsAndOctaves, Test::parallelFifthsAndOctaves, Test::A2,
             Test::crossRelation, Test::hasRootAndThird, Test::tripleOnlyCadence, Test::doubledChromatic, Test::minorChromaticsInPassing,
             Test::doubledLeadingTone, Test::leadingTendencyTone, Test::N6InversionDoubling, Test::N6Tendencies, Test::A6InversionDoubling,
-            Test::Fr6InversionDoubling, Test::A6Tendencies, Test::bassD5P5, Test::preparedSeventh, Test::fakeChords, Test::oddIntervals, Test::voiceDirection, Test::twoPassing};
+            Test::Fr6InversionDoubling, Test::A6Tendencies, Test::bassD5P5, Test::preparedSeventh, Test::fakeChords, Test::oddIntervals, Test::voiceDirection,
+            Test::twoPassing, Test::majorSeventh};
 
     Test[] currentTests = new Test[]{
             Test::voiceDistances, Test::rangeTest, Test::modeCheck, Test::dissonantInversionIsPassing, Test::hasRootAndThird,
             Test::N6InversionDoubling, Test::tripleOnlyCadence, Test::minorChromaticsInPassing, Test::doubledLeadingTone, Test::A6InversionDoubling,
-            Test::fakeChords, Test::Fr6InversionDoubling
+            Test::fakeChords, Test::Fr6InversionDoubling, Test::majorSeventh
     };
 
     String[] names = new String[]{"arraySizesAndNull", "overlap", "voiceDistances", "rangeTest", /*"spelling",*/
-            "cadenceProperlyLabelled", /*"inversionProperlyLabelled",*/ "modeCheck", "inversionComplete", "modulatingOnV",
+            "cadenceProperlyLabelled", "modeCheck", "inversionComplete", "modulatingOnV",
             "key", "retrogression", "dissonantInversionIsPassing", "passingBassStepwise", "beforePassingBassStepwise",
             "seventhTendencyTone", "modulationHasPivotOrPassing", "directFifthsAndOctaves", "parallelFifthsAndOctaves", "A2",
             "crossRelation", "hasRootAndThird", "tripleOnlyCadence", "doubledChromatic", "minorChromaticsInPassing",
             "doubledLeadingTone", "leadingTendencyTone", "N6InversionDoubling", "N6Tendencies", "A6InversionDoubling",
-            "Fr6InversionDoubling", "A6Tendencies", "bassD5P5", "preparedSeventh", "fakeChords", "oddIntervals", "voiceDirection", "twoPassing"};
+            "Fr6InversionDoubling", "A6Tendencies", "bassD5P5", "preparedSeventh", "fakeChords", "oddIntervals", "voiceDirection",
+            "twoPassing", "majorSeventh"};
 
     static boolean all(State curr) {
         for (Test t : currentTests) {
@@ -96,7 +98,8 @@ public interface Test extends BiPredicate<State, State> {
 
     static boolean voiceDistances(State prev, State curr) {
         for (int i = 0; i < Voice.VOICES - 1; i++) {
-            if (curr.midi[i+1] - curr.midi[i] > DISTANCES[i]) {
+            int distance = curr.midi[i+1] - curr.midi[i];
+            if (distance > DISTANCES[i] || distance < 0) {
                 return false;
             }
         }
@@ -134,16 +137,11 @@ public interface Test extends BiPredicate<State, State> {
     }
 
     static boolean isCadence(State prev, State curr) {
-        return ((curr.chord.equals(Chord.V) || curr.chord.equals(Chord.V_MINOR)) && curr.voicing[Voice.BASS.ordinal()].equals(ChordTone.ROOT)) ||
+        return (((curr.chord.equals(Chord.V) || curr.chord.equals(Chord.V_MINOR)) && curr.voicing[Voice.BASS.ordinal()].equals(ChordTone.ROOT)) ||
                 (prev.chord.type.equals(ChordType.DOMINANT) && curr.chord.type.equals(ChordType.TONIC) && curr.consonant()) ||
                 ((prev.chord.type.equals(ChordType.SECONDARY_LEADING) || prev.chord.type.equals(ChordType.SECONDARY_DOMINANT))
-                        && curr.chord.type.equals(ChordType.TONIC) && curr.consonant() && prev.modulating);
+                        && curr.chord.type.equals(ChordType.TONIC) && curr.consonant() && prev.modulating)) && !curr.seventh();
     }
-
-    /*static boolean inversionProperlyLabelled(State prev, State curr) {
-        return curr.inversion.seventh == (curr.counts()[ChordTone.SEVENTH.ordinal()] > 0)
-                && curr.inversion.bass.equals(curr.voicing[Voice.BASS.ordinal()]);
-    }*/
 
     // check chords match mode as well.
     static boolean modeCheck(State prev, State curr) {
@@ -174,10 +172,11 @@ public interface Test extends BiPredicate<State, State> {
     // vii/ -> I/ or VI/
     // TODO passing?
     static boolean retrogression(State prev, State curr) {
+        boolean one = curr.chord.equals(Chord.I) || curr.chord.equals(Chord.i);
         if (prev.cadence) {
-            return curr.chord.equals(Chord.I) || curr.chord.equals(Chord.i);
+            return one;
         }
-        else if (prev.chord.type.equals(ChordType.PREDOMINANT) && (curr.chord.equals(Chord.I) || curr.chord.equals(Chord.i))) {
+        else if (prev.chord.type.equals(ChordType.PREDOMINANT) && one) {
             return curr.passing;
         }
         else if (prev.chord.type.equals(ChordType.DOMINANT) && curr.chord.type.equals(ChordType.PREDOMINANT)) {
@@ -188,7 +187,7 @@ public interface Test extends BiPredicate<State, State> {
         }
         else if (prev.chord.type.equals(ChordType.SECONDARY_LEADING) || prev.chord.type.equals(ChordType.SECONDARY_DOMINANT)) {
             if ((prev.chord.profile.equals(SecondaryProfile.V) || prev.chord.profile.equals(SecondaryProfile.v))
-                    && (curr.chord.equals(Chord.I) || curr.chord.equals(Chord.i)) &&
+                    && one &&
                     curr.voicing[Voice.BASS.ordinal()].equals(ChordTone.FIFTH)) {
                 return true;
             }
@@ -202,17 +201,28 @@ public interface Test extends BiPredicate<State, State> {
             }
             return false;
         }
-        else if (prev.chord.equals(Chord.N6) || prev.chord.equals(Chord.A6) || prev.chord.equals(Chord.Fr6)) {
-            return ((curr.chord.equals(Chord.V) || curr.chord.equals(Chord.V_MINOR)) && curr.voicing[Voice.BASS.ordinal()].equals(ChordTone.ROOT)) ||
-                    ((curr.chord.equals(Chord.I) || curr.chord.equals(Chord.i)) && curr.voicing[Voice.BASS.ordinal()].equals(ChordTone.FIFTH));
-        }
-        else if ((prev.chord.equals(Chord.I) || prev.chord.equals(Chord.i)) && prev.voicing[Voice.BASS.ordinal()].equals(ChordTone.FIFTH)) {
-            return (curr.chord.equals(Chord.V) || curr.chord.equals(Chord.V_MINOR)) && curr.voicing[Voice.BASS.ordinal()].equals(ChordTone.ROOT);
+        else {
+            boolean five = curr.chord.equals(Chord.V) || curr.chord.equals(Chord.V_MINOR);
+            if (prev.chord.equals(Chord.A6) || prev.chord.equals(Chord.Fr6)) {
+                return (five && curr.voicing[Voice.BASS.ordinal()].equals(ChordTone.ROOT)) ||
+                        (one && curr.voicing[Voice.BASS.ordinal()].equals(ChordTone.FIFTH));
+            }
+            else if (prev.chord.equals(Chord.N6)) {
+                return (five && curr.voicing[Voice.BASS.ordinal()].equals(ChordTone.ROOT)) ||
+                        (one && curr.voicing[Voice.BASS.ordinal()].equals(ChordTone.FIFTH)) ||
+                        (SecondaryProfile.v.equals(curr.chord.profile));
+            }
+            else if ((prev.chord.equals(Chord.I) || prev.chord.equals(Chord.i)) && prev.voicing[Voice.BASS.ordinal()].equals(ChordTone.FIFTH)) {
+                return five && curr.voicing[Voice.BASS.ordinal()].equals(ChordTone.ROOT);
+            }
         }
         return true;
     }
 
     static boolean dissonantInversionIsPassing(State prev, State curr) {
+        if (curr.chord == Chord.Fr6) {
+            return true;
+        }
         return curr.passing || curr.consonant();
     }
 
@@ -307,7 +317,7 @@ public interface Test extends BiPredicate<State, State> {
     }
 
     static boolean crossRelation(State prev, State curr) {
-        if (prev.cadence) {
+        if (prev.cadence || prev.chord == Chord.N6) {
             return true;
         }
         for(int i = 0; i < Voice.VOICES; i++) {
@@ -366,20 +376,17 @@ public interface Test extends BiPredicate<State, State> {
                 leadingTones++;
             }
         }
-        if (leadingTones > 1) {
-            return false;
-        }
         int[] counts = curr.counts();
         switch(curr.chord.type) {
             case SECONDARY_LEADING: return counts[ChordTone.ROOT.ordinal()] < 2;
             case SECONDARY_DOMINANT: return counts[ChordTone.THIRD.ordinal()] < 2;
-            default: return true;
+            default: return leadingTones <= 1;
         }
     }
 
     // third of V or root of VII, secondaries
     // there was an exception
-    // TODO does frustrated leading tone apply to secondaries?
+    // TODO does frustrated leading tone apply to secondaries? In an inner voice it's ok. Would prefer incomplete chord.
     static boolean leadingTendencyTone(State prev, State curr) {
         Interval[] intervals = prev.intervals(curr);
 
@@ -395,7 +402,7 @@ public interface Test extends BiPredicate<State, State> {
                     return prev.chord.profile != null && prev.chord.profile.equals(curr.chord.profile);
                 }
             }
-        } else {
+        } else if (prev.chord.profile == null) { // TODO based on what he said in class
             for (Voice v : Voice.OUTER) {
                 if (prev.degrees[v.ordinal()].equals(Degree._7) && !intervals[v.ordinal()].equals(Interval.MINOR_SECOND)) {
                     return false;
@@ -461,7 +468,7 @@ public interface Test extends BiPredicate<State, State> {
         return true;
     }
 
-    // "nondominant sevenths must be prepared" - what about dominant sevenths?
+    // TODO "nondominant sevenths must be prepared" - what about dominant sevenths?
     // maybe not N6 A6
     static boolean preparedSeventh(State prev, State curr) {
         if (!curr.seventh()) {
@@ -527,6 +534,13 @@ public interface Test extends BiPredicate<State, State> {
             }
         }
         return false;
+    }
+
+    // TODO is this real?
+    static boolean majorSeventh(State prev, State curr) {
+        return (curr.chord != Chord.I && curr.chord != Chord.i && curr.chord != Chord.IV && curr.chord != Chord.iv
+                && curr.chord != Chord.III && curr.chord != Chord.VI)
+                || !curr.seventh();
     }
 
     static boolean twoPassing(State prev, State curr) {

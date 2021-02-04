@@ -480,4 +480,16 @@ public class State {
         }
         return states;
     }
+
+    public String detailedToString() {
+        return toString() + " " + degrees[Voice.BASS.ordinal()].noteStringWithOctave(key, midi[Voice.BASS.ordinal()]) +
+                degrees[Voice.TENOR.ordinal()].noteStringWithOctave(key, midi[Voice.TENOR.ordinal()]) +
+                degrees[Voice.ALTO.ordinal()].noteStringWithOctave(key, midi[Voice.ALTO.ordinal()]) +
+                degrees[Voice.SOPRANO.ordinal()].noteStringWithOctave(key, midi[Voice.SOPRANO.ordinal()]) +
+                ", cpm: " + (cadence ? "1" : "0") + (passing ? "1" : "0") + (modulating ? "1" : "0");
+    }
+
+    public ChordTone voicing(Voice v) {
+
+    }
 }
